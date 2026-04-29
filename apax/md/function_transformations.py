@@ -2,7 +2,6 @@ import dataclasses
 
 import jax
 import jax.numpy as jnp
-
 from jax_md import quantity
 
 

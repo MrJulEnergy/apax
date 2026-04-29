@@ -11,12 +11,12 @@ import yaml
 import znh5md
 from ase import Atoms
 from ase.io import read, write
+from jax_md import partition, space
 
 from apax.config import Config, MDConfig
 from apax.md import run_md
 from apax.md.ase_calc import ASECalculator
 from apax.md.function_transformations import UncertaintyDrivenDynamics
-from jax_md import partition, space
 from apax.utils import math
 from tests.conftest import load_config_and_run_training
 

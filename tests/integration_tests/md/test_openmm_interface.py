@@ -8,13 +8,13 @@ import orbax.checkpoint as ocp
 import yaml
 from ase import Atoms
 from ase.io import read, write
+from jax_md import partition, space
 from openmm.app import PDBReporter
 from openmm.openmm import LangevinMiddleIntegrator, PythonForce
 from openmm.unit import femtosecond, kelvin, picosecond
 
 from apax.config import Config
 from apax.md.openmm_interface import OpenMMInterface, create_simulation, create_system
-from jax_md import partition, space
 from apax.utils.openmm_reporters import XYZReporter
 
 TEST_PATH = pathlib.Path(__file__).parent.resolve()

@@ -11,6 +11,7 @@ from ase import units
 from ase.io import read
 from jax import tree_util
 from jax.experimental import io_callback
+from jax_md import partition, quantity, simulate, space
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
@@ -32,7 +33,6 @@ from apax.train.checkpoints import (
     restore_parameters,
 )
 from apax.train.run import setup_logging
-from jax_md import partition, quantity, simulate, space
 
 log = logging.getLogger(__name__)
 

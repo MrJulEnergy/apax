@@ -9,13 +9,13 @@ import pytest
 import yaml
 from ase import Atoms
 from ase.io import read, write
+from jax_md import partition, space
 from openmm.openmm import LangevinMiddleIntegrator, PythonForce
 from openmm.unit import angstrom, ev, femtosecond, item, kelvin, picosecond
 
 from apax.config import Config
 from apax.md.ase_calc import ASECalculator
 from apax.md.openmm_interface import OpenMMInterface, create_simulation, create_system
-from jax_md import partition, space
 
 TEST_PATH = pathlib.Path(__file__).parent.resolve()
 

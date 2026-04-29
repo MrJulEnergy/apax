@@ -1,7 +1,6 @@
 import jax.numpy as jnp
 import numpy as np
 from jax import vmap
-
 from jax_md import partition, space
 
 

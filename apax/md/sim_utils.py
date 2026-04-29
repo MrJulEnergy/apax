@@ -3,7 +3,6 @@ from typing import Callable, Optional
 
 import jax.numpy as jnp
 import numpy as np
-
 from jax_md import space
 
 

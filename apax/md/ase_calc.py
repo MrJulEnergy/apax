@@ -10,6 +10,7 @@ from ase.calculators.calculator import Calculator, all_changes, all_properties
 from ase.calculators.singlepoint import SinglePointCalculator
 from flax.core.frozen_dict import freeze, unfreeze
 from jax import tree_util
+from jax_md import partition, space
 from tqdm import tqdm, trange
 from vesin import NeighborList
 
@@ -21,7 +22,6 @@ from apax.train.checkpoints import (
     check_for_ensemble,
     restore_parameters,
 )
-from jax_md import partition, space
 
 
 def maybe_vmap(apply, params):
