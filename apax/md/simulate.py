@@ -236,7 +236,9 @@ def maybe_save_checkpoint(mngr, state, step, checkpoint_interval, sim_time_per_s
         mngr.save(step, args=ocp.args.StandardSave({"state": state, "step": step}))
 
 
-def maybe_update_pbar(sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature):
+def maybe_update_pbar(
+    sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature
+):
     if step % pbar_update_freq == 0:
         sim_pbar.set_postfix(T=f"{current_temperature:.1f} K")
         sim_pbar.update(pbar_increment)
@@ -401,7 +403,9 @@ def run_sim(
 
             if not all_checks_passed:
                 with logging_redirect_tqdm():
-                    log.critical("One or more dynamics checks failed at step: %d", step + 1)
+                    log.critical(
+                        "One or more dynamics checks failed at step: %d", step + 1
+                    )
                 break
 
             if neighbor.did_buffer_overflow:
@@ -410,8 +414,12 @@ def run_sim(
 
             state = new_state
             step += 1
-            maybe_save_checkpoint(mngr, state, step, checkpoint_interval, sim_time_per_step)
-            maybe_update_pbar(sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature)
+            maybe_save_checkpoint(
+                mngr, state, step, checkpoint_interval, sim_time_per_step
+            )
+            maybe_update_pbar(
+                sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature
+            )
 
         # In case of mismatch update freq and n_steps, we can set it to 100% manually
         sim_pbar.update(n_steps - sim_pbar.n)
