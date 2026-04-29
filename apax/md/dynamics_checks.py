@@ -3,7 +3,7 @@ from typing import Literal, Union
 import jax.numpy as jnp
 from pydantic import BaseModel, TypeAdapter
 
-from apax.utils.jax_md_reduced.space import distance
+from jax_md.space import distance
 
 
 class DynamicsCheckBase(BaseModel):

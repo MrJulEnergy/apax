@@ -21,7 +21,7 @@ from apax.train.checkpoints import (
     check_for_ensemble,
     restore_parameters,
 )
-from apax.utils.jax_md_reduced import partition, space
+from jax_md import partition, space
 
 
 def maybe_vmap(apply, params):
@@ -37,7 +37,12 @@ def maybe_vmap(apply, params):
 
 
 def build_energy_neighbor_fns(
-    atoms: ase.Atoms, config: Config, params, dr_threshold: float, neigbor_from_jax: bool
+    atoms: ase.Atoms,
+    config: Config,
+    params,
+    dr_threshold: float,
+    neigbor_from_jax: bool,
+    disable_cell_list: bool = False,
 ):
     r_max = config.model.basis.r_max
     box = jnp.asarray(atoms.cell.array, dtype=jnp.float64)
@@ -57,7 +62,7 @@ def build_energy_neighbor_fns(
             config.model.basis.r_max,
             dr_threshold,
             fractional_coordinates=True,
-            disable_cell_list=True,
+            disable_cell_list=disable_cell_list,
             format=partition.Sparse,
         )
 

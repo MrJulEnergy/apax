@@ -15,7 +15,7 @@ from apax.layers.masking import mask_by_atom
 from apax.layers.properties import stress_times_vol
 from apax.layers.readout import AtomisticReadout
 from apax.layers.scaling import PerElementScaleShift
-from apax.utils.jax_md_reduced import partition
+from jax_md import partition
 from apax.utils.math import fp64_sum
 from apax.utils.transform import make_energy_only_model
 

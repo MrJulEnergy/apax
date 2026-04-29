@@ -10,7 +10,7 @@ from apax.layers.descriptor.moments import geometric_moments
 from apax.layers.descriptor.triangular_indices import tril_2d_indices, tril_3d_indices
 from apax.layers.masking import mask_by_neighbor
 from apax.utils.convert import str_to_dtype
-from apax.utils.jax_md_reduced import space
+from jax_md import space
 
 
 class GaussianMomentDescriptor(nn.Module):

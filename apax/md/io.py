@@ -10,7 +10,7 @@ from ase.calculators.singlepoint import SinglePointCalculator
 
 from apax.md.sim_utils import System
 from apax.utils.helpers import APAX_PROPERTIES
-from apax.utils.jax_md_reduced import space
+from jax_md import space
 
 log = logging.getLogger(__name__)
 

@@ -32,8 +32,7 @@ from apax.train.checkpoints import (
     restore_parameters,
 )
 from apax.train.run import setup_logging
-from apax.utils.jax_md_reduced import partition, quantity, simulate, space
-from apax.utils.transform import make_energy_only_model
+from jax_md import partition, quantity, simulate, space
 
 log = logging.getLogger(__name__)
 
@@ -45,15 +44,19 @@ def create_energy_fn(
     n_models,
     shallow=False,
 ):
-    def full_ensemble(params, R, Z, neighbor, box, offsets, perturbation=None):
+    def full_ensemble(params, R, Z, neighbor, box, offsets, perturbation=None, **kwargs):
         vmodel = jax.vmap(model, (0, None, None, None, None, None, None), 0)
         energies, _ = vmodel(params, R, Z, neighbor, box, offsets, perturbation)
         energy = jnp.mean(energies)
         return energy
 
-    def shallow_ensemble(params, R, Z, neighbor, box, offsets, perturbation=None):
+    def shallow_ensemble(params, R, Z, neighbor, box, offsets, perturbation=None, **kwargs):
         energies, _ = model(params, R, Z, neighbor, box, offsets, perturbation)
         energy = jnp.mean(energies)
+        return energy
+
+    def single_model(params, R, Z, neighbor, box, offsets, perturbation=None, **kwargs):
+        energy, _ = model(params, R, Z, neighbor, box, offsets, perturbation)
         return energy
 
     if n_models > 1:
@@ -62,7 +65,7 @@ def create_energy_fn(
         else:
             energy_fn = full_ensemble
     else:
-        energy_fn = make_energy_only_model(model)
+        energy_fn = single_model
 
     energy_fn = partial(
         energy_fn,
@@ -510,7 +513,7 @@ def md_setup(model_config: Config, md_config: MDConfig):
         md_config.dr_threshold,
         fractional_coordinates=frac_coords,
         format=partition.Sparse,
-        disable_cell_list=True,
+        disable_cell_list=md_config.disable_cell_list,
     )
 
     _, gradient_model_params = restore_parameters(model_config.data.model_version_path)
