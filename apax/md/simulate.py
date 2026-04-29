@@ -9,7 +9,6 @@ import numpy as np
 import orbax.checkpoint as ocp
 from ase import units
 from ase.io import read
-from jax import tree_util
 from jax.experimental import io_callback
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
