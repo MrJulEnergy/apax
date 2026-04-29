@@ -157,25 +157,53 @@ def handle_checkpoints(state, step, system, load_momenta, ckpt_dir, should_load_
     return state, step
 
 
-def create_evaluation_functions(aux_fn, positions, Z, neighbor, box, dynamics_checks):
+# def create_evaluation_functions(aux_fn, positions, Z, neighbor, box, dynamics_checks):
+#     offsets = jnp.zeros((neighbor.idx.shape[1], 3))
+
+#     def on_eval(positions, neighbor, box):
+#         predictions = aux_fn(positions, Z, neighbor, box, offsets)
+#         all_checks_passed = True
+
+#         for check in dynamics_checks:
+#             check_passed = check.check(predictions, positions, box)
+#             all_checks_passed = all_checks_passed & check_passed
+        
+#         io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
+#         return predictions, all_checks_passed
+
+#     predictions = aux_fn(positions, Z, neighbor, box, offsets)
+#     dummpy_preds = tree_util.tree_map(lambda x: jnp.zeros_like(x), predictions)
+
+#     def no_eval(positions, neighbor, box):
+#         predictions = dummpy_preds
+#         all_checks_passed = True
+#         return predictions, all_checks_passed
+
+#     return on_eval, no_eval
+
+
+def create_evaluation_functions(traj_handler, aux_fn, positions, Z, neighbor, box, dynamics_checks):
     offsets = jnp.zeros((neighbor.idx.shape[1], 3))
 
-    def on_eval(positions, neighbor, box):
+    def on_eval(state, neighbor, box, nbr_kwargs):
+        positions = state.position
         predictions = aux_fn(positions, Z, neighbor, box, offsets)
         all_checks_passed = True
 
         for check in dynamics_checks:
             check_passed = check.check(predictions, positions, box)
             all_checks_passed = all_checks_passed & check_passed
-        return predictions, all_checks_passed
+        
+        io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
+        return all_checks_passed
 
-    predictions = aux_fn(positions, Z, neighbor, box, offsets)
-    dummpy_preds = tree_util.tree_map(lambda x: jnp.zeros_like(x), predictions)
+    # predictions = aux_fn(positions, Z, neighbor, box, offsets)
+    # dummpy_preds = tree_util.tree_map(lambda x: jnp.zeros_like(x), predictions)
 
-    def no_eval(positions, neighbor, box):
-        predictions = dummpy_preds
+    def no_eval(state, neighbor, box, nbr_kwargs):
+        # predictions = dummpy_preds
         all_checks_passed = True
-        return predictions, all_checks_passed
+        return all_checks_passed
 
     return on_eval, no_eval
 
@@ -225,6 +253,7 @@ def run_sim(
     extra_capacity: int,
     rng_key: int,
     traj_handler: TrajHandler,
+    sampling_rate: int = 10,
     load_momenta: bool = False,
     restart: bool = True,
     checkpoint_interval: int = 50_000,
@@ -300,8 +329,8 @@ def run_sim(
     pbar_update_freq = int(np.ceil(500 / n_inner))
     pbar_increment = n_inner * pbar_update_freq
 
-    sampling_rate = traj_handler.sampling_rate
     on_eval, no_eval = create_evaluation_functions(
+        traj_handler,
         sim_fns.auxiliary_fn,
         state.position,
         system.atomic_numbers,
@@ -333,14 +362,11 @@ def run_sim(
             neighbor = neighbor.update(state.position, **nbr_kwargs)
 
             condition = step % sampling_rate == 0
-            predictions, check_passed = jax.lax.cond(
-                condition, on_eval, no_eval, state.position, neighbor, box
+            checks_passed = jax.lax.cond(
+                condition, on_eval, no_eval, state, neighbor, box, nbr_kwargs
             )
 
-            all_checks_passed = all_checks_passed & check_passed
-
-            # maybe move this to on_eval
-            io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
+            all_checks_passed = all_checks_passed & checks_passed
             return state, outer_step, neighbor, all_checks_passed
 
         all_checks_passed = True
@@ -601,7 +627,6 @@ def run_md(model_config: Config, md_config: MDConfig, log_level="error"):
 
     traj_handler = H5TrajHandler(
         system,
-        md_config.sampling_rate,
         md_config.buffer_size,
         traj_path,
         md_config.ensemble.dt,
@@ -617,6 +642,7 @@ def run_md(model_config: Config, md_config: MDConfig, log_level="error"):
         n_steps=n_steps,
         n_inner=md_config.n_inner,
         extra_capacity=md_config.extra_capacity,
+        sampling_rate=md_config.sampling_rate,
         load_momenta=md_config.load_momenta,
         traj_handler=traj_handler,
         rng_key=jax.random.PRNGKey(md_config.seed),
