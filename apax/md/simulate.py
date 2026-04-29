@@ -50,7 +50,9 @@ def create_energy_fn(
         energy = jnp.mean(energies)
         return energy
 
-    def shallow_ensemble(params, R, Z, neighbor, box, offsets, perturbation=None, **kwargs):
+    def shallow_ensemble(
+        params, R, Z, neighbor, box, offsets, perturbation=None, **kwargs
+    ):
         energies, _ = model(params, R, Z, neighbor, box, offsets, perturbation)
         energy = jnp.mean(energies)
         return energy
