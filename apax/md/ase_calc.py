@@ -42,7 +42,7 @@ def build_energy_neighbor_fns(
     params,
     dr_threshold: float,
     neigbor_from_jax: bool,
-    disable_cell_list: bool = False,,
+    disable_cell_list: bool = False,
     calc_stress: bool | None = None,
     calc_hessian: bool | None = None,
     force_variance: bool | None = None,
