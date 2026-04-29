@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from jax_md import partition
 
 from apax.layers.descriptor.gaussian_moment_descriptor import GaussianMomentDescriptor
 from apax.layers.distances import make_distance_fn
@@ -15,7 +16,6 @@ from apax.layers.masking import mask_by_atom, mask_hessian
 from apax.layers.properties import stress_times_vol
 from apax.layers.readout import AtomisticReadout
 from apax.layers.scaling import PerElementScaleShift
-from apax.utils.jax_md_reduced import partition
 from apax.utils.math import fp64_sum
 from apax.utils.transform import make_energy_only_model
 

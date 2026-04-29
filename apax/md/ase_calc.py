@@ -10,6 +10,7 @@ from ase.calculators.calculator import Calculator, all_changes, all_properties
 from ase.calculators.singlepoint import SinglePointCalculator
 from flax.core.frozen_dict import freeze, unfreeze
 from jax import tree_util
+from jax_md import partition, space
 from tqdm import tqdm, trange
 from vesin import NeighborList
 
@@ -21,7 +22,6 @@ from apax.train.checkpoints import (
     check_for_ensemble,
     restore_parameters,
 )
-from apax.utils.jax_md_reduced import partition, space
 
 
 def maybe_vmap(apply, params):
@@ -42,6 +42,7 @@ def build_energy_neighbor_fns(
     params,
     dr_threshold: float,
     neigbor_from_jax: bool,
+    disable_cell_list: bool = False,,
     calc_stress: bool | None = None,
     calc_hessian: bool | None = None,
     force_variance: bool | None = None,
@@ -55,6 +56,7 @@ def build_energy_neighbor_fns(
     if neigbor_from_jax:
         if np.all(box < 1e-6):
             displacement_fn, _ = space.free()
+            disable_cell_list = True
         else:
             displacement_fn, _ = space.periodic_general(box, fractional_coordinates=True)
 
@@ -64,7 +66,7 @@ def build_energy_neighbor_fns(
             config.model.basis.r_max,
             dr_threshold,
             fractional_coordinates=True,
-            disable_cell_list=True,
+            disable_cell_list=disable_cell_list,
             format=partition.Sparse,
         )
 
@@ -189,6 +191,7 @@ class ASECalculator(Calculator):
         calc_stress: bool | None = None,
         calc_hessian: bool = False,
         force_variance: bool | None = None,
+        disable_cell_list: bool = False,
         **kwargs,
     ):
         """
@@ -216,10 +219,14 @@ class ASECalculator(Calculator):
         force_variance:
             Whether to calculate the force variance (for shallow ensembles).
             Overrides the model config if provided.
+        disable_cell_list:
+            Disable the cell list acceleration in the JaxMD neighborlist.
+            Required for gas-phase (non-periodic) simulations.
         """
         Calculator.__init__(self, **kwargs)
         self.dr_threshold = dr_threshold
         self.transformations = transformations
+        self.disable_cell_list = disable_cell_list
 
         self.model_config, self.params = restore_parameters(model_dir)
 
@@ -321,6 +328,7 @@ class ASECalculator(Calculator):
             self.params,
             self.dr_threshold,
             self.neigbor_from_jax,
+            disable_cell_list=self.disable_cell_list,
             calc_stress=self.calc_stress,
             calc_hessian=self.calc_hessian,
             force_variance=self.force_variance,
