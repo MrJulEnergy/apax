@@ -98,6 +98,8 @@ class DataConfig(BaseModel, extra="forbid"):
         | Path to directory where training results and checkpoints are written.
     experiment : str, required
         | Model name distinguishing from others in directory.
+    dataset : Union[CachedDataset, OTFDataset, PBPDatset], default = CachedDataset()
+        | Dataset type and processing options.
     data_path : str, required if train_data_path and val_data_path is not specified
         | Path to single dataset file.
     train_data_path : str, required if data_path is not specified
@@ -114,10 +116,14 @@ class DataConfig(BaseModel, extra="forbid"):
         | Number of training examples to be evaluated at once.
     valid_batch_size : int, default = 100
         | Number of validation examples to be evaluated at once.
-    shuffle_buffer_size : int, default = 1000
-        | Size of the `tf.data` shuffle buffer.
-    energy_regularisation :
-        | Magnitude of the regularization in the per-element energy regression.
+    shift_method : str, default = "per_element_regression_shift"
+        | Method used to shift the elemental energies.
+    shift_options : dict, default = {"energy_regularisation": 1.0}
+        | Options for the shift method.
+    scale_method : str, default = "per_element_force_rms_scale"
+        | Method used to scale the elemental outputs.
+    scale_options : dict, default = {}
+        | Options for the scale method.
     pos_unit : str, default = "Ang"
         unit of length
     energy_unit : str, default = "eV"
@@ -460,8 +466,6 @@ class Config(BaseModel, frozen=True, extra="forbid"):
         | :class:`.TBCallback`, :class:`.MLFlowCallback`
     progress_bar : :class:`.TrainProgressbarConfig`
         | Progressbar configuration.
-    checkpoints : :class:`.CheckpointConfig`
-        | Checkpoint configuration.
     data_parallel : bool, default = True
         | Automatically uses all available GPUs for data parallel training.
         | Set to false to force single device training.

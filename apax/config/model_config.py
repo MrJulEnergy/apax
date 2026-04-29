@@ -36,7 +36,7 @@ class GaussianBasisConfig(BaseModel, extra="forbid"):
 
 class BesselBasisConfig(BaseModel, extra="forbid"):
     """
-    Gaussian primitive basis functions.
+    Bessel basis functions.
 
     Parameters
     ----------
@@ -130,7 +130,30 @@ EmpiricalCorrection = Union[ZBLRepulsion, ExponentialRepulsion, LatentEwald]
 
 
 class PropertyHead(BaseModel, extra="forbid"):
-    """ """
+    """
+    Configuration for property heads.
+
+    Parameters
+    ----------
+    name : str
+        Name of the property.
+    aggregation : str, default = "none"
+        Aggregation method for atomic contributions.
+    mode : str, default = "l0"
+        Rotation order of the property.
+    nn : List[PositiveInt], default = [128, 128]
+        Number of hidden layers and units in those layers.
+    n_shallow_members : int, default = 0
+        Number of shallow ensemble members for this head.
+    w_init : Literal["normal", "lecun"], default = "lecun"
+        Initialization scheme for the neural network weights.
+    b_init : Literal["normal", "zeros"], default = "zeros"
+        Initialization scheme for the neural network biases.
+    use_ntk : bool, default = False
+        Whether or not to use NTK parametrization.
+    dtype : Literal["fp32", "fp64"], default = "fp32"
+        Data type for property head calculations.
+    """
 
     name: str
     aggregation: str = "none"
@@ -167,8 +190,10 @@ class BaseModelConfig(BaseModel, extra="forbid"):
         Whether or not to use NTK parametrization.
     ensemble : Optional[EnsembleConfig], default = None
         What kind of model ensemble to use (optional).
-    use_zbl : bool, default = False
-        Whether to include the ZBL correction.
+    property_heads : list[PropertyHead], default = []
+        List of property heads to include.
+    empirical_corrections : list[EmpiricalCorrection], default = []
+        List of empirical corrections to include.
     calc_stress : bool, default = False
         Whether to calculate stress during model evaluation.
     descriptor_dtype : Literal["fp32", "fp64"], default = "fp32"
