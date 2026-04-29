@@ -168,7 +168,7 @@ def create_evaluation_functions(traj_handler, aux_fn, Z, neighbor, dynamics_chec
         for check in dynamics_checks:
             check_passed = check.check(predictions, positions, box)
             all_checks_passed = all_checks_passed & check_passed
-        
+
         io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
         return all_checks_passed
 
