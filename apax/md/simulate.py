@@ -508,6 +508,7 @@ def md_setup(model_config: Config, md_config: MDConfig):
         init_box=np.array(system.box),
         inference_disp_fn=displacement_fn,
     )
+    disable_cell_list = md_config.disable_cell_list or np.all(system.box < 1e-6)
     neighbor_fn = partition.neighbor_list(
         displacement_fn,
         system.box,
@@ -515,7 +516,7 @@ def md_setup(model_config: Config, md_config: MDConfig):
         md_config.dr_threshold,
         fractional_coordinates=frac_coords,
         format=partition.Sparse,
-        disable_cell_list=md_config.disable_cell_list,
+        disable_cell_list=disable_cell_list,
     )
 
     _, gradient_model_params = restore_parameters(model_config.data.model_version_path)
