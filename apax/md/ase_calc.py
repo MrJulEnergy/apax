@@ -53,6 +53,7 @@ def build_energy_neighbor_fns(
     if neigbor_from_jax:
         if np.all(box < 1e-6):
             displacement_fn, _ = space.free()
+            disable_cell_list = True
         else:
             displacement_fn, _ = space.periodic_general(box, fractional_coordinates=True)
 
@@ -134,6 +135,7 @@ class ASECalculator(Calculator):
         dr_threshold: float = 0.5,
         transformations: list[Callable] = [],
         padding_factor: float = 1.5,
+        disable_cell_list: bool = False,
         **kwargs,
     ):
         """
@@ -152,10 +154,14 @@ class ASECalculator(Calculator):
             Multiple of the fallback vesin's amount of neighbors.
             This NL will be padded to `len(neighbors) * padding_factor`
             on NL initialization.
+        disable_cell_list:
+            Disable the cell list acceleration in the JaxMD neighborlist.
+            Required for gas-phase (non-periodic) simulations.
         """
         Calculator.__init__(self, **kwargs)
         self.dr_threshold = dr_threshold
         self.transformations = transformations
+        self.disable_cell_list = disable_cell_list
 
         self.model_config, self.params = restore_parameters(model_dir)
 
@@ -228,6 +234,7 @@ class ASECalculator(Calculator):
             self.params,
             self.dr_threshold,
             self.neigbor_from_jax,
+            disable_cell_list=self.disable_cell_list,
         )
 
         if self.n_models > 1:
