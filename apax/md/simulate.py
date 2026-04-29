@@ -157,32 +157,7 @@ def handle_checkpoints(state, step, system, load_momenta, ckpt_dir, should_load_
     return state, step
 
 
-# def create_evaluation_functions(aux_fn, positions, Z, neighbor, box, dynamics_checks):
-#     offsets = jnp.zeros((neighbor.idx.shape[1], 3))
-
-#     def on_eval(positions, neighbor, box):
-#         predictions = aux_fn(positions, Z, neighbor, box, offsets)
-#         all_checks_passed = True
-
-#         for check in dynamics_checks:
-#             check_passed = check.check(predictions, positions, box)
-#             all_checks_passed = all_checks_passed & check_passed
-        
-#         io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
-#         return predictions, all_checks_passed
-
-#     predictions = aux_fn(positions, Z, neighbor, box, offsets)
-#     dummpy_preds = tree_util.tree_map(lambda x: jnp.zeros_like(x), predictions)
-
-#     def no_eval(positions, neighbor, box):
-#         predictions = dummpy_preds
-#         all_checks_passed = True
-#         return predictions, all_checks_passed
-
-#     return on_eval, no_eval
-
-
-def create_evaluation_functions(traj_handler, aux_fn, positions, Z, neighbor, box, dynamics_checks):
+def create_evaluation_functions(traj_handler, aux_fn, Z, neighbor, dynamics_checks):
     offsets = jnp.zeros((neighbor.idx.shape[1], 3))
 
     def on_eval(state, neighbor, box, nbr_kwargs):
@@ -197,11 +172,7 @@ def create_evaluation_functions(traj_handler, aux_fn, positions, Z, neighbor, bo
         io_callback(traj_handler.step, None, (state, predictions, nbr_kwargs))
         return all_checks_passed
 
-    # predictions = aux_fn(positions, Z, neighbor, box, offsets)
-    # dummpy_preds = tree_util.tree_map(lambda x: jnp.zeros_like(x), predictions)
-
     def no_eval(state, neighbor, box, nbr_kwargs):
-        # predictions = dummpy_preds
         all_checks_passed = True
         return all_checks_passed
 
@@ -241,6 +212,35 @@ def create_constraint_function(constraints: list[ConstraintBase], system):
         return state
 
     return apply_constraints, constraind_idxs
+
+
+def check_for_nans(state, step):
+    if np.any(np.isnan(state.position)) or np.any(np.isnan(state.velocity)):
+        raise ValueError(f"NaN encountered, simulation aborted after {step + 1} steps.")
+
+
+def handle_overflow(neighbor_fn, state, traj_handler, step):
+    with logging_redirect_tqdm():
+        log.warning("step %d: neighbor list overflowed, reallocating.", step)
+    traj_handler.reset_buffer()
+    return neighbor_fn.allocate(state.position)
+
+
+def maybe_save_checkpoint(mngr, state, step, checkpoint_interval, sim_time_per_step):
+    if step % checkpoint_interval == 0:
+        with logging_redirect_tqdm():
+            log.info(
+                "saving checkpoint at %.1f ps - step: %d",
+                step * sim_time_per_step,
+                step,
+            )
+        mngr.save(step, args=ocp.args.StandardSave({"state": state, "step": step}))
+
+
+def maybe_update_pbar(sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature):
+    if step % pbar_update_freq == 0:
+        sim_pbar.set_postfix(T=f"{current_temperature:.1f} K")
+        sim_pbar.update(pbar_increment)
 
 
 def run_sim(
@@ -332,10 +332,8 @@ def run_sim(
     on_eval, no_eval = create_evaluation_functions(
         traj_handler,
         sim_fns.auxiliary_fn,
-        state.position,
         system.atomic_numbers,
         neighbor,
-        system.box,
         dynamics_checks,
     )
 
@@ -393,47 +391,28 @@ def run_sim(
         disable=disable_pbar,
         leave=True,
     )
+    sim_time_per_step = n_inner * ensemble.dt / 1000
     with mngr:
         while step < n_outer:
             new_state, neighbor, current_temperature, all_checks_passed = sim(
                 state, step, neighbor
             )
 
-            if np.any(np.isnan(state.position)) or np.any(np.isnan(state.velocity)):
-                raise ValueError(
-                    f"NaN encountered, simulation aborted after {step + 1} steps."
-                )
+            check_for_nans(state, step)
 
             if not all_checks_passed:
                 with logging_redirect_tqdm():
-                    log.critical(
-                        f"One or more dynamics checks failed at step: {step + 1}"
-                    )
+                    log.critical("One or more dynamics checks failed at step: %d", step + 1)
                 break
 
             if neighbor.did_buffer_overflow:
-                with logging_redirect_tqdm():
-                    log.warn("step %d: neighbor list overflowed, reallocating.", step)
-                traj_handler.reset_buffer()
-                neighbor = neighbor_fn.allocate(
-                    state.position
-                )  # TODO check that this actually works
-            else:
-                state = new_state
-                step += 1
+                neighbor = handle_overflow(neighbor_fn, state, traj_handler, step)
+                continue
 
-                if step % checkpoint_interval == 0:
-                    with logging_redirect_tqdm():
-                        current_sim_time = step * n_inner * ensemble.dt / 1000
-                        log.info(
-                            f"saving checkpoint at {current_sim_time:.1f} ps - step: {step}"
-                        )
-                    ckpt = {"state": state, "step": step}
-                    mngr.save(step, args=ocp.args.StandardSave(ckpt))
-
-                if step % pbar_update_freq == 0:
-                    sim_pbar.set_postfix(T=f"{(current_temperature):.1f} K")  # set string
-                    sim_pbar.update(pbar_increment)
+            state = new_state
+            step += 1
+            maybe_save_checkpoint(mngr, state, step, checkpoint_interval, sim_time_per_step)
+            maybe_update_pbar(sim_pbar, step, pbar_update_freq, pbar_increment, current_temperature)
 
         # In case of mismatch update freq and n_steps, we can set it to 100% manually
         sim_pbar.update(n_steps - sim_pbar.n)
