@@ -47,7 +47,6 @@ def build_energy_neighbor_fns(
     calc_hessian: bool | None = None,
     force_variance: bool | None = None,
 ):
-    r_max = config.model.basis.r_max
     box = jnp.asarray(atoms.cell.array, dtype=jnp.float64)
     box = box.T
     displacement_fn = None
